@@ -7,6 +7,7 @@
 const tokens = require('./tokens.json');
 const utils = require('./utils');
 const Twit = require('twit');
+const fs = require('fs');
 
 module.exports = class TwitLib {
     constructor() {
@@ -21,7 +22,7 @@ module.exports = class TwitLib {
      * @returns {Promise}
      */
     _twitterGet(path, params) {
-        return new Promise(function (resolve, reject) {
+        return new Promise((resolve, reject) => {
             this.twit.get(path, params, function (error, data, response) {
                 if (response.statusCode == 429) {
                     console.log('timeout reached');
@@ -62,38 +63,44 @@ module.exports = class TwitLib {
         })
     }
     getFollowers(){
-        this._twitterGet('friends/ids')
-            .then(data => {
-                return utils.splitIdsInHundreds(data.ids)
-            })
-            .then(separatedIDs => {
-                return Promise.all(separatedIDs.map(hundredIDs => {
-                    return twitterGet('users/lookup', {user_id: hundredIDs})
+        return new Promise((resolve, reject) => {
+            this._twitterGet('friends/ids')
+                .then(data => {
+                    return utils.splitIdsInHundreds(data.ids)
+                })
+                .then(separatedIDs => {
+                    return Promise.all(separatedIDs.map(hundredIDs => {
+                        return this._twitterGet('users/lookup', {user_id: hundredIDs})
 
-                }))
-                    .then(results => {
-                        let result = [];
-                        results.forEach(innerArray => {
-                            result = result.concat(innerArray);
+                    }))
+                        .then(results => {
+                            let result = [];
+                            results.forEach(innerArray => {
+                                result = result.concat(innerArray);
+                            })
+                            return result;
                         })
-                        return result;
-                    })
-                    .then(result => {
-                        result.forEach(user => {
-                            this.followers.push(user);
+                        .then(result => {
+                            result.forEach(user => {
+                                this.followers.push(user);
+                            })
                         })
-                    })
-            })
-            .catch(error => {
-                console.log(`Error: `);
-                throw new Error(error);
-            })
+                })
+                .then(() => {
+                    console.log('finishing');
+                    console.log(this.followers.length);
+                    resolve(this.followers)
+                })
+                .catch(error => {
+                    console.log(`Error: ${error.stack}`);
+                })
+        })
+
     }
 
-    writeOut(){
-
+    followersToFile(filename){
+        let names = this.followers.map( user => user.name);
+        fs.writeFileSync(`${filename}.json`, JSON.stringify(names));
+        console.log('done writing');
     }
-}
-
-
-
+};
