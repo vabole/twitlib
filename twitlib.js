@@ -12,95 +12,33 @@ const fs = require('fs');
 module.exports = class TwitLib {
     constructor() {
         this.twit = new Twit(tokens);
-        this.followers = [];
+        this.friends = [];
     }
 
-    /***
-     * Wrapper for Twit.get() function call
-     * @param path: API endpoint
-     * @param params API parameters
-     * @returns {Promise}
-     */
-    _twitterGet(path, params) {
-        return new Promise((resolve, reject) => {
-            this.twit.get(path, params, function (error, data, response) {
-                if (response.statusCode == 429) {
-                    console.log('timeout reached');
-                    setTimeout(resolve(twitterGet(path, params)), 1000);
-                }
-                if (response.statusCode != 200) {
-                    reject(new Error(response.statusCode));
-                }
-                if (data.errors) {
-                    reject(new Error(data.errors))
-                }
-                resolve(data);
-            })
-        })
-    }
+    getFriends(username){
+        let options = {stringify_ids: true, count: 5000}
+        if (username){
+            options.screen_name = username;
+        }
 
-    /***
-     * Wrapper for Twit.post() function call
-     * @param path: API endpoint
-     * @param params API parameters
-     * @returns {Promise}
-     */
-    _twitterPost(path, params) {
-        return new Promise(function (resolve, reject) {
-            this.twit.post(path, params, function (error, data, response) {
-                if (response.statusCode == 429) {
-                    console.log('timeout reached');
-                    setTimeout(resolve(twitterGet(path, params)), 1000);
-                }
-                if (response.statusCode != 200) {
-                    reject(new Error(response.statusCode));
-                }
-                if (data.errors) {
-                    reject(new Error(data.errors))
-                }
-                resolve(data);
-            })
-        })
-    }
-    getFollowers(){
-        return new Promise((resolve, reject) => {
-            this._twitterGet('friends/ids')
-                .then(data => {
-                    return utils.splitIdsInHundreds(data.ids)
+        return  this.twit.get('friends/ids', options)
+
+                .then( ({data: {ids, next_cursor_str: cursor }}) => {
+                    fs.writeFileSync('testData.json', JSON.stringify(ids));
+                    return utils.splitIdsInHundreds(ids)
                 })
                 .then(separatedIDs => {
                     return Promise.all(separatedIDs.map(hundredIDs => {
-                        return this._twitterGet('users/lookup', {user_id: hundredIDs})
-
+                        return this.twit.get('users/lookup', {user_id: hundredIDs})
                     }))
-                        .then(results => {
-                            let result = [];
-                            results.forEach(innerArray => {
-                                result = result.concat(innerArray);
-                            })
-                            return result;
-                        })
                         .then(result => {
-                            result.forEach(user => {
-                                this.followers.push(user);
+                            result.forEach(({data: ids}) => {
+                                this.friends = this.friends.concat(ids);
                             })
                         })
-                })
-                .then(() => {
-                    console.log('finishing');
-                    console.log(this.followers.length);
-                    resolve(this.followers)
                 })
                 .catch(error => {
                     console.log(`Error: ${error.stack}`);
                 })
-        })
-
-    }
-
-    followersToFile(filename){
-        let names = this.followers.map( user => user.name);
-        fs.writeFileSync(`${filename}.json`, JSON.stringify(names));
-        console.log('done writing');
-    }
+        }
 };

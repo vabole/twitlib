@@ -8,13 +8,12 @@ let TwitLib = require('./twitlib');
 
 let tl = new TwitLib;
 
-tl.getFollowers().then(() => {
-        tl.followersToFile('followers');
-        console.log(tl.followers.length);
+tl.getFriends().then(() => {
+        //tl.followersToFile('friends');
+    require('fs').writeFileSync('testData2.json', JSON.stringify(tl.friends.map(follower => follower)));
     }
 )
     .catch(error => {
         console.log(`Error: ${error.stack}`);
     });
 
-//console.log(tl.followers);

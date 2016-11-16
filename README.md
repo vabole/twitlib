@@ -1,4 +1,4 @@
-Experimenting with Twitter API
+My experiments with Twitter API
 
 Usage
 
@@ -9,7 +9,7 @@ const Twitlib = require(twitlib);
 
 let tl = new Twitlib() 
 
-tl.getFollowers()
+tl.getFriends()
  // got "User Objects" array https://dev.twitter.com/overview/api/users
     .then( userObjects => {})   
 ```
@@ -18,4 +18,4 @@ tl.getFollowers()
 **Available methods:**
 
 `getfollowers()`
-Returns a promise which resolves to the followers (as [User Object](https://dev.twitter.com/overview/api/users) array )
+Returns a promise which resolves to the array of friends' [User Objects](https://dev.twitter.com/overview/api/users)
